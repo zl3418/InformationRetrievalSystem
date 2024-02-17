@@ -9,15 +9,15 @@ def main():
     precision = 0
 
     while precision < target_precision:
-        results = search_google(current_query)
-        relevant_docs = get_relevance_feedback(results)
+        all_docs = search_google(current_query)
+        relevant_docs = get_relevance_feedback(all_docs)
 
         precision = len(relevant_docs) / 10
         if precision == 0:
             print("Precision is 0. Stopping the search.")
             break
 
-        current_query = expand_query(current_query, relevant_docs)
+        current_query = expand_query(current_query, relevant_docs, all_docs)
         print(f"Modified query: {current_query}")
 
     print("Final query:", current_query)
