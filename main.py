@@ -9,16 +9,30 @@ def main():
     precision = 0
 
     while precision < target_precision:
+        print("Parameters:")
+        print(f"Client key  = YOUR_CLIENT_KEY")
+        print(f"Engine key  = YOUR_ENGINE_KEY")
+        print(f"Query       = {current_query}")
+        print(f"Precision   = {target_precision}")
         all_docs = search_google(current_query)
         relevant_docs = get_relevance_feedback(all_docs)
 
         precision = len(relevant_docs) / 10
+        print("FEEDBACK SUMMARY")
+        print(f"Query {current_query}")
+        print(f"Precision {precision}")
         if precision == 0:
             print("Precision is 0. Stopping the search.")
             break
+        elif precision >= target_precision:
+            print(f"Desired precision reached, done")
+            break
+        else:
+            print(f"Still below the desired precision of {target_precision}")
 
-        current_query = expand_query(current_query, relevant_docs, all_docs)
-        print(f"Modified query: {current_query}")
+        new_query = expand_query(current_query, relevant_docs, all_docs)
+        print(f"Augmenting by {' '.join(new_query.split()[len(current_query.split()):])}")
+        current_query = new_query
 
     print("Final query:", current_query)
 

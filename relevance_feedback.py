@@ -11,14 +11,14 @@ def custom_tfidf_transformer(corpus):
     vectorizer = TfidfVectorizer()
     tfidf_matrix = vectorizer.fit_transform(corpus)
     N = len(corpus)
-    dft = np.sum(tfidf_matrix.toarray() > 0, axis=0)
-    for i, row in enumerate(tfidf_matrix.toarray()):
-        for j, val in enumerate(row):
-            if val > 0:
-                tft_d = val
-                wt_d = (1 + np.log10(tft_d)) * np.log10(N / dft[j])
-                tfidf_matrix[i, j] = wt_d
-    return tfidf_matrix, vectorizer
+    dft = np.sum(tfidf_matrix > 0, axis=0).A1  # Use sparse matrix operations
+    tfidf_matrix = tfidf_matrix.tolil()  # Convert to LIL format for efficient value assignment
+    for i, j in zip(*tfidf_matrix.nonzero()):
+        tft_d = tfidf_matrix[i, j]
+        if tft_d > 0:
+            wt_d = (1 + np.log10(tft_d)) * np.log10(N / dft[j])
+            tfidf_matrix[i, j] = wt_d
+    return tfidf_matrix.tocsr(), vectorizer  # Convert back to CSR format
 
 def expand_query(current_query, relevant_docs, all_docs):
     # Preprocess and tokenize the relevant documents
@@ -40,12 +40,12 @@ def expand_query(current_query, relevant_docs, all_docs):
     term_vectors = tfidf_matrix[1:len(combined_terms)+1]
 
     # Compute cosine similarity between the query vector and each term vector
-    similarity_scores = cosine_similarity(query_vector, term_vectors)[0]
+    similarity_scores = cosine_similarity(query_vector, term_vectors).flatten()
 
     # Rank the terms based on similarity scores
     ranked_terms = [term for _, term in sorted(zip(similarity_scores, combined_terms), key=lambda pair: pair[0], reverse=True)]
 
-    # Select top new terms that are not already in the current query, considering individual words in bigrams
+    # Select top new terms that are not already in the current query
     current_query_terms = set(current_query.split())
     new_terms = []
     for term in ranked_terms:
@@ -75,10 +75,17 @@ def expand_query(current_query, relevant_docs, all_docs):
 
 def get_relevance_feedback(results):
     relevant_docs = []
-    for i, result in enumerate(results):
-        print(f"{i+1}. {result['title']} - {result['link']}")
-        print(result['snippet'])
-        feedback = input("Relevant (Y/N)? ")
+    print("Google Search Results:")
+    print("======================")
+    for i, result in enumerate(results, start=1):
+        print(f"Result {i}")
+        print("[")
+        print(f" URL: {result['link']}")
+        print(f" Title: {result['title']}")
+        print(f" Summary: {result['snippet']}")
+        print("]")
+        feedback = input(f"Relevant (Y/N)? ")
         if feedback.lower() == 'y':
             relevant_docs.append(result)
+    print("======================")
     return relevant_docs
