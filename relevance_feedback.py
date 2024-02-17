@@ -1,20 +1,24 @@
+from itertools import permutations
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 import nltk
 from nltk import ngrams
 from nltk.corpus import stopwords
 nltk.download('stopwords')
 
-def get_relevance_feedback(results):
-    relevant_docs = []
-    for i, result in enumerate(results):
-        print(f"{i+1}. {result['title']} - {result['link']}")
-        print(result['snippet'])
-        feedback = input("Relevant (Y/N)? ")
-        if feedback.lower() == 'y':
-            relevant_docs.append(result)
-    return relevant_docs
-
+def custom_tfidf_transformer(corpus):
+    vectorizer = TfidfVectorizer()
+    tfidf_matrix = vectorizer.fit_transform(corpus)
+    N = len(corpus)
+    dft = np.sum(tfidf_matrix.toarray() > 0, axis=0)
+    for i, row in enumerate(tfidf_matrix.toarray()):
+        for j, val in enumerate(row):
+            if val > 0:
+                tft_d = val
+                wt_d = (1 + np.log10(tft_d)) * np.log10(N / dft[j])
+                tfidf_matrix[i, j] = wt_d
+    return tfidf_matrix, vectorizer
 
 def expand_query(current_query, relevant_docs, all_docs):
     # Preprocess and tokenize the relevant documents
@@ -29,9 +33,9 @@ def expand_query(current_query, relevant_docs, all_docs):
     # Combine tokens and bigrams for term selection
     combined_terms = filtered_tokens + filtered_bigrams
 
-    # Compute TF-IDF vectors for the combined terms and all documents
-    vectorizer = TfidfVectorizer()
-    tfidf_matrix = vectorizer.fit_transform([current_query] + combined_terms + [doc['snippet'] for doc in all_docs])
+    # Compute custom TF-IDF vectors for the combined terms and all documents
+    corpus = [current_query] + combined_terms + [doc['snippet'] for doc in all_docs]
+    tfidf_matrix, vectorizer = custom_tfidf_transformer(corpus)
     query_vector = tfidf_matrix[0]
     term_vectors = tfidf_matrix[1:len(combined_terms)+1]
 
@@ -53,10 +57,28 @@ def expand_query(current_query, relevant_docs, all_docs):
                 new_terms.append(word)
                 current_query_terms.add(word)
 
-    # Add new terms to the current query
-    expanded_query = " ".join(current_query.split() + new_terms)
+    # Generate all possible permutations of the query terms
+    all_query_terms = current_query.split() + new_terms
+    permutations_scores = {}
+    for perm in permutations(all_query_terms):
+        perm_query = " ".join(perm)
+        perm_vector = vectorizer.transform([perm_query])[0]
+        score = cosine_similarity(perm_vector, tfidf_matrix[1:]).mean()
+        permutations_scores[perm_query] = score
 
-    return expanded_query
+    # Select the permutation with the highest score as the best order
+    best_query = max(permutations_scores, key=permutations_scores.get)
+
+    return best_query
 
 
 
+def get_relevance_feedback(results):
+    relevant_docs = []
+    for i, result in enumerate(results):
+        print(f"{i+1}. {result['title']} - {result['link']}")
+        print(result['snippet'])
+        feedback = input("Relevant (Y/N)? ")
+        if feedback.lower() == 'y':
+            relevant_docs.append(result)
+    return relevant_docs
