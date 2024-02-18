@@ -9,8 +9,6 @@ def read_stopwords():
     f = open("stopwords.txt", "r")
     words = f.read().split()
     f.close()
-    print("words")
-    print(words)
     return words
 
 
