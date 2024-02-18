@@ -21,19 +21,13 @@ cs6111-project/
 
 ## How to Run the Program
 
-1. Unzip the code repository and navigate into cs6111-project
-
-    ```
-    cd cs6111-project
-    ```
-
-3. Install the required dependencies:
+1. Install the required dependencies:
 
     ```
     pip install -r requirements.txt
     ```
 
-4. Run the program with the following command:
+2. Run the program with the following command:
 
     ```
     python main.py <google_api_key> <google_engine_id> <precision> <query>
