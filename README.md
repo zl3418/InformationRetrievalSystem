@@ -8,7 +8,7 @@
 ## Files
 
 ```
-cs6111-project/
+proj1/
     │
     ├── main.py                 # Main script to run the query reformulation system
     ├── google_search.py        # Module for interacting with the Google Custom Search API
