@@ -1,91 +1,110 @@
 from itertools import permutations
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
-import nltk
 from nltk import ngrams
-from nltk.corpus import stopwords
-nltk.download('stopwords')
 
-def custom_tfidf_transformer(corpus):
-    vectorizer = TfidfVectorizer()
-    tfidf_matrix = vectorizer.fit_transform(corpus)
-    N = len(corpus)
-    dft = np.sum(tfidf_matrix > 0, axis=0).A1  # Use sparse matrix operations
-    tfidf_matrix = tfidf_matrix.tolil()  # Convert to LIL format for efficient value assignment
-    for i, j in zip(*tfidf_matrix.nonzero()):
-        tft_d = tfidf_matrix[i, j]
-        if tft_d > 0:
-            wt_d = (1 + np.log10(tft_d)) * np.log10(N / dft[j])
-            tfidf_matrix[i, j] = wt_d
-    return tfidf_matrix.tocsr(), vectorizer  # Convert back to CSR format
 
-def expand_query(current_query, relevant_docs, all_docs):
-    # Preprocess and tokenize the relevant documents
-    relevant_text = " ".join(doc['snippet'] for doc in relevant_docs)
-    tokens = nltk.word_tokenize(relevant_text.lower())
-    filtered_tokens = [token for token in tokens if token.isalnum() and token not in stopwords.words('english')]
+def read_stopwords():
+    """Returns list of stopwords."""
+    f = open("stopwords.txt", "r")
+    words = f.read().split()
+    f.close()
+    print("words")
+    print(words)
+    return words
 
-    # Extract phrases (bigrams) from relevant documents
-    bigrams = [' '.join(bigram) for bigram in ngrams(filtered_tokens, 2)]
-    filtered_bigrams = [bigram for bigram in bigrams if bigram.count(' ') == 1]
 
-    # Combine tokens and bigrams for term selection
-    combined_terms = filtered_tokens + filtered_bigrams
+def ngram_overlap_score(permutation, relevant_docs, n=2):
+    # Tokenize and generate n-grams for the permutation, converting to lowercase
+    perm_tokens = permutation.lower().split()
+    if len(perm_tokens) < n:
+        return 0  # Return zero score if permutation is too short for n-grams
+    perm_ngrams = set(ngrams(perm_tokens, n))
 
-    # Compute custom TF-IDF vectors for the combined terms and all documents
-    corpus = [current_query] + combined_terms + [doc['snippet'] for doc in all_docs]
-    tfidf_matrix, vectorizer = custom_tfidf_transformer(corpus)
-    query_vector = tfidf_matrix[0]
-    term_vectors = tfidf_matrix[1:len(combined_terms)+1]
+    # Generate n-grams for each relevant document and calculate overlap
+    overlap_scores = []
+    for doc in relevant_docs:
+        doc_tokens = doc.get('snippet', '').lower().split()
+        if len(doc_tokens) < n:
+            continue  # Skip document if it's too short for n-grams
+        doc_ngrams = set(ngrams(doc_tokens, n))
+        overlap = len(perm_ngrams & doc_ngrams) / len(perm_ngrams)
+        overlap_scores.append(overlap)
 
-    # Compute cosine similarity between the query vector and each term vector
-    similarity_scores = cosine_similarity(query_vector, term_vectors).flatten()
+    # Return the average overlap score, or zero if no scores were calculated
+    return sum(overlap_scores) / len(overlap_scores) if overlap_scores else 0
 
-    # Rank the terms based on similarity scores
-    ranked_terms = [term for _, term in sorted(zip(similarity_scores, combined_terms), key=lambda pair: pair[0], reverse=True)]
+
+def rocchio_optimal_query(relevant_doc_vectors, non_relevant_doc_vectors):
+    # Compute the average vector for relevant and non-relevant documents
+    avg_relevant_vector = np.mean(relevant_doc_vectors, axis=0) if relevant_doc_vectors.size > 0 else np.zeros_like(
+        relevant_doc_vectors.shape[1])
+    avg_non_relevant_vector = np.mean(non_relevant_doc_vectors,
+                                      axis=0) if non_relevant_doc_vectors.size > 0 else np.zeros_like(
+        non_relevant_doc_vectors.shape[1])
+
+    # Compute the optimal query vector
+    optimal_query_vector = avg_relevant_vector - avg_non_relevant_vector
+    return optimal_query_vector
+
+
+def expand_query(current_query, relevant_docs, non_relevant_docs, all_docs):
+    # Compute TF-IDF vectors for all documents
+    corpus = [doc.get('snippet', '') for doc in all_docs]
+    tfidf_vectorizer = TfidfVectorizer(stop_words=read_stopwords())
+    tfidf_matrix = tfidf_vectorizer.fit_transform(corpus).toarray()
+
+    # Extract the TF-IDF vectors for relevant and non-relevant documents
+    relevant_vectors = tfidf_matrix[[all_docs.index(doc) for doc in relevant_docs]]
+    non_relevant_vectors = tfidf_matrix[[all_docs.index(doc) for doc in non_relevant_docs]]
+
+    # Compute the Rocchio optimal query vector
+    optimal_query_vector = rocchio_optimal_query(relevant_vectors, non_relevant_vectors)
+
+    # Rank terms based on their values in the optimal query vector
+    term_values = [(i, value) for i, value in enumerate(optimal_query_vector)]
+    sorted_term_values = sorted(term_values, key=lambda x: x[1], reverse=True)
+    ranked_terms = [tfidf_vectorizer.get_feature_names_out()[i] for i, _ in sorted_term_values]
 
     # Select top new terms that are not already in the current query
     current_query_terms = set(current_query.split())
     new_terms = []
     for term in ranked_terms:
-        if len(new_terms) >= 2:
-            break
-        words = term.split()
-        for word in words:
-            if word not in current_query_terms and len(new_terms) < 2:
-                new_terms.append(word)
-                current_query_terms.add(word)
+        if term not in current_query_terms:
+            new_terms.append(term)
+            if len(new_terms) >= 2:
+                break
 
     # Generate all possible permutations of the query terms
-    all_query_terms = current_query.split() + new_terms
+    all_query_terms = current_query_terms.union(new_terms)
     permutations_scores = {}
     for perm in permutations(all_query_terms):
         perm_query = " ".join(perm)
-        perm_vector = vectorizer.transform([perm_query])[0]
-        score = cosine_similarity(perm_vector, tfidf_matrix[1:]).mean()
+        score = ngram_overlap_score(perm_query, relevant_docs)
         permutations_scores[perm_query] = score
 
-    # Select the permutation with the highest score as the best order
+    # Select the permutation with the highest cosine similarity score as the best order
     best_query = max(permutations_scores, key=permutations_scores.get)
 
-    return best_query
-
+    return best_query, new_terms
 
 
 def get_relevance_feedback(results):
     relevant_docs = []
+    non_relevant_docs = []
     print("Google Search Results:")
     print("======================")
     for i, result in enumerate(results, start=1):
         print(f"Result {i}")
         print("[")
-        print(f" URL: {result['link']}")
-        print(f" Title: {result['title']}")
-        print(f" Summary: {result['snippet']}")
+        print(f" URL: {result.get('link', 'No URL available')}")
+        print(f" Title: {result.get('title', 'No title available')}")
+        print(f" Summary: {result.get('snippet', 'No summary available')}")
         print("]")
         feedback = input(f"Relevant (Y/N)? ")
         if feedback.lower() == 'y':
             relevant_docs.append(result)
+        else:
+            non_relevant_docs.append(result)
     print("======================")
-    return relevant_docs
+    return [relevant_docs, non_relevant_docs]

@@ -1,13 +1,10 @@
 import requests
 
-API_KEY = "AIzaSyA-qNsQ7hExo8A0ZYVz7Vwq-5jIetGoF8o"
-CSE_ID = "c5cfab8a2ca6a4074"
-
-def search_google(query):
+def search_google(query, google_api_key, google_engine_id):
     url = "https://www.googleapis.com/customsearch/v1"
     params = {
-        "key": API_KEY,
-        "cx": CSE_ID,
+        "key": google_api_key,
+        "cx": google_engine_id,
         "q": query,
         "num": 10
     }
