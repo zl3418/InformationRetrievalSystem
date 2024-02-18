@@ -14,6 +14,17 @@
 - `stopwords.txt`: List of stopwords used for query processing.
 - `README.md`: This file, containing project documentation.
 
+cs6111-project/
+│
+├── main.py                 # Main script to run the query reformulation system
+├── google_search.py        # Module for interacting with the Google Custom Search API
+├── requirements.txt        # Module for handling relevance feedback and query expansion
+└── utils.py                # List of Python package dependencies
+└── stopwords.txt           # List of stopwords used for query processing
+└── README.md               # Project documentation
+
+
+
 ## How to Run the Program
 
 1. Unzip the code repository and navigate into cs6111-project
@@ -34,21 +45,25 @@
     python Main.py <google_api_key> <google_engine_id> <precision> <query>
     ```
 
+
 ## Internal Design
 
 - **Main Module (`Main.py`)**: Orchestrates the search process, including querying Google, obtaining relevance feedback, and modifying the query based on feedback.
-- **Google Search Module (`google_search.py`)**: Handles communication with the Google Custom Search API.
-- **Relevance Feedback Module (`relevance_feedback.py`)**: Manages the relevance feedback process and query expansion based on feedback.
+- **Google Search Module (`google_search.py`)**: Handles communication with the Google Custom Search API. It sends search queries to the API and processes the results to extract relevant information such as URLs, titles, and snippets of the search results.
+- **Relevance Feedback Module (`relevance_feedback.py`)**: Manages the relevance feedback process and query expansion based on feedback. It presents search results to the user and collects their feedback on whether each result is relevant or not. Based on this feedback, it separates the results into relevant and non-relevant sets for further processing.
 - **External Libraries**:
   - `requests`: Used for making HTTP requests to the Google Custom Search API.
   - `numpy`: Used for numerical operations in the Rocchio algorithm.
   - `scikit-learn`: Used for TF-IDF vectorization and cosine similarity calculations.
   - `nltk`: Used for natural language processing tasks.
 
-## Query-Modification Method
 
-- **Keyword Selection**: In each round, we use the Rocchio algorithm to adjust the query vector based on relevance feedback. We then select the top new keywords that are not already in the current query.
-- **Query Word Order**: We generate all possible permutations of the query terms and rank them based on their average n-gram overlap with the relevant documents. The permutation with the highest score is chosen as the best query for the next round.
+## Query-Modification Method
+- **Relevance Feedback**: After each round of search, the user provides feedback on the relevance of the retrieved documents. Based on this feedback, documents are classified into relevant and non-relevant sets.
+- **Vector Representation**: The snippets of both relevant and non-relevant documents are converted into TF-IDF vectors using scikit-learn's TfidfVectorizer. This vectorization process transforms the text into a numerical representation that can be used for mathematical operations.
+- **Rocchio Algorithm**: The Rocchio algorithm is applied to adjust the query vector. The algorithm computes a new query vector that is closer to the centroid of the relevant document vectors and further away from the centroid of the non-relevant document vectors. This is achieved by taking the mean of the relevant document vectors, subtracting the mean of the non-relevant document vectors, and adding this result to the original query vector.
+- **Keyword Selection**: From the adjusted query vector, new keywords are selected based on their weights in the vector. The top new keywords that are not already present in the current query are chosen to be added to the query.
+- **Query Word Order**: To determine the order of words in the modified query, all possible permutations of the query terms are generated. Each permutation is scored based on its average n-gram overlap with the relevant documents. The permutation with the highest score is selected as the best query for the next round.
 
 ## Google Custom Search Engine Details
 
