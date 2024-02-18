@@ -5,24 +5,18 @@
 - Zixin Li (Columbia UNI: zl3418)
 - You Ji (Columbia UNI: yj2806)
 
-## Files Submitted
+## Files
 
-- `Main.py`: The main script to run the program.
-- `google_search.py`: Module for interacting with the Google Custom Search API.
-- `relevance_feedback.py`: Module for handling relevance feedback and query expansion.
-- `requirements.txt`: List of Python package dependencies.
-- `stopwords.txt`: List of stopwords used for query processing.
-- `README.md`: This file, containing project documentation.
-
+```
 cs6111-project/
-│
-├── main.py                 # Main script to run the query reformulation system
-├── google_search.py        # Module for interacting with the Google Custom Search API
-├── requirements.txt        # Module for handling relevance feedback and query expansion
-└── utils.py                # List of Python package dependencies
-└── stopwords.txt           # List of stopwords used for query processing
-└── README.md               # Project documentation
-
+    │
+    ├── main.py                 # Main script to run the query reformulation system
+    ├── google_search.py        # Module for interacting with the Google Custom Search API
+    ├── requirements.txt        # Module for handling relevance feedback and query expansion
+    └── utils.py                # List of Python package dependencies
+    └── stopwords.txt           # List of stopwords used for query processing
+    └── README.md               # Project documentation
+```
 
 
 ## How to Run the Program
@@ -42,13 +36,13 @@ cs6111-project/
 4. Run the program with the following command:
 
     ```
-    python Main.py <google_api_key> <google_engine_id> <precision> <query>
+    python main.py <google_api_key> <google_engine_id> <precision> <query>
     ```
 
 
 ## Internal Design
 
-- **Main Module (`Main.py`)**: Orchestrates the search process, including querying Google, obtaining relevance feedback, and modifying the query based on feedback.
+- **Main Module (`main.py`)**: Orchestrates the search process, including querying Google, obtaining relevance feedback, and modifying the query based on feedback.
 - **Google Search Module (`google_search.py`)**: Handles communication with the Google Custom Search API. It sends search queries to the API and processes the results to extract relevant information such as URLs, titles, and snippets of the search results.
 - **Relevance Feedback Module (`relevance_feedback.py`)**: Manages the relevance feedback process and query expansion based on feedback. It presents search results to the user and collects their feedback on whether each result is relevant or not. Based on this feedback, it separates the results into relevant and non-relevant sets for further processing.
 - **External Libraries**:
