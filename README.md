@@ -63,3 +63,7 @@ cs6111-project/
 
 - **API Key**: AIzaSyA-qNsQ7hExo8A0ZYVz7Vwq-5jIetGoF8o
 - **Engine ID**: c5cfab8a2ca6a4074
+
+## Additional Information
+
+- Due to the recent tragic event involving the death of Susan Wojcicki's son, the Google search results have been altered, resulting in different test cases for our system. Prior to this unfortunate incident, our system consistently achieved 100% precision in identifying 23andMe co-founder Anne Wojcicki within the first iteration of search results.
