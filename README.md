@@ -1,10 +1,5 @@
 # Information Retrieval System
 
-## Team Members
-
-- Zixin Li (Columbia UNI: zl3418)
-- You Ji (Columbia UNI: yj2806)
-
 ## Files
 
 ```
@@ -55,8 +50,8 @@ proj1/
 
 ## Google Custom Search Engine Details
 
-- **API Key**: AIzaSyA-qNsQ7hExo8A0ZYVz7Vwq-5jIetGoF8o
-- **Engine ID**: c5cfab8a2ca6a4074
+- **API Key**
+- **Engine ID**
 
 ## Additional Information
 
